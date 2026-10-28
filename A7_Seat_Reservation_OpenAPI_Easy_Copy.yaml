@@ -1,0 +1,119 @@
+openapi: 3.0.3
+
+info:
+  title: Movie Theater Seat Reservation API
+  version: 1.0.0
+  description: >-
+    This API lets customers check seat availability for a movie showtime,
+    temporarily reserve seats while buying tickets, and cancel a reservation.
+    It describes how the client and theater server exchange information.
+    This is an API design only, not a working service.
+
+servers:
+  - url: https://api.example-theater.com/v1
+
+paths:
+  /showtimes/{showtimeId}/seats:
+    get:
+      summary: Get available seats for a showtime
+      description: Returns the seats and their current availability.
+      parameters:
+        - name: showtimeId
+          in: path
+          required: true
+          description: ID of the selected movie showtime.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Seats were found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  showtimeId:
+                    type: string
+                  seats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        seatId:
+                          type: string
+                        available:
+                          type: boolean
+              example:
+                showtimeId: S1
+                seats:
+                  - seatId: A6
+                    available: true
+                  - seatId: A7
+                    available: false
+        '404':
+          description: The showtime was not found.
+
+  /seat-holds:
+    post:
+      summary: Reserve selected seats
+      description: Places a temporary hold on selected seats during checkout.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [showtimeId, seatIds]
+              properties:
+                showtimeId:
+                  type: string
+                seatIds:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: string
+            example:
+              showtimeId: S1
+              seatIds: [A6, A7]
+      responses:
+        '201':
+          description: Seats were reserved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  holdId:
+                    type: string
+                  status:
+                    type: string
+              example:
+                holdId: H123
+                status: ACTIVE
+        '400':
+          description: Invalid seat selection or missing information.
+        '404':
+          description: The showtime was not found.
+        '409':
+          description: One or more selected seats are already taken.
+
+  /seat-holds/{holdId}:
+    delete:
+      summary: Cancel a seat reservation
+      description: Releases seats from a temporary hold.
+      parameters:
+        - name: holdId
+          in: path
+          required: true
+          description: ID of the reservation to cancel.
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Reservation canceled successfully.
+        '404':
+          description: Reservation was not found.
+        '409':
+          description: Reservation cannot be canceled because tickets were purchased.
+        '410':
+          description: Reservation already expired.
